@@ -14,6 +14,7 @@ var (
 	tagValueTemplate       = "%s=%v"
 )
 
+// validateUser validates models.User
 func validateUser(user models.User) error {
 	validate := validator.New(validator.WithRequiredStructEnabled())
 
@@ -23,6 +24,7 @@ func validateUser(user models.User) error {
 	return nil
 }
 
+// getValidationErrorsRepresentation return string representation of errors occured during models.User validation
 func getValidationErrorsRepresentation(err error) string {
 	var vErrors validator.ValidationErrors
 	if errors.As(err, &vErrors) {
