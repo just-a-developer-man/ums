@@ -24,8 +24,8 @@ func validateUser(user models.User) error {
 	return nil
 }
 
-// getValidationErrorsRepresentation return string representation of errors occured during models.User validation
-func getValidationErrorsRepresentation(err error) string {
+// getValidationErrorMessage return string representation of errors occured during models.User validation
+func getValidationErrorMessage(err error) string {
 	var vErrors validator.ValidationErrors
 	if errors.As(err, &vErrors) {
 		errMap := make(map[string]string)
