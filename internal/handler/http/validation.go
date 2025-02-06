@@ -12,16 +12,21 @@ import (
 var (
 	unknownValidationError = "unknown validation error"
 	tagValueTemplate       = "%s=%v"
+	validate               *validator.Validate
 )
+
+func init() {
+	validate = validator.New(validator.WithRequiredStructEnabled())
+}
+
+// validateId validates user id with rfc4122 standard
+func validateId(id string) error {
+	return validate.Var(id, "required,uuid_rfc4122")
+}
 
 // validateUser validates models.User
 func validateUser(user models.User) error {
-	validate := validator.New(validator.WithRequiredStructEnabled())
-
-	if err := validate.Struct(&user); err != nil {
-		return err
-	}
-	return nil
+	return validate.Struct(&user)
 }
 
 // getValidationErrorMessage return string representation of errors occured during models.User validation
