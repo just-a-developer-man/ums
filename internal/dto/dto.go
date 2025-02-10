@@ -1,6 +1,10 @@
 package dto
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 // CreateUserRequest represents the data required to create a new user.
 type CreateUserRequest struct {
@@ -12,9 +16,9 @@ type CreateUserRequest struct {
 	Password string `json:"password" validate:"required,min=8,max=64,passwordComplexity"`
 }
 
-// CreateUserAdminRequest represents the data required for an admin to create a new user.
+// CreateUserWithRoleRequest represents the data required for an admin to create a new user.
 // Unlike CreateUserRequest, it allows setting the Role of the user.
-type CreateUserAdminRequest struct {
+type CreateUserWithRoleRequest struct {
 	// Name is the user's name. It must consist of alphanumeric characters, hyphens, or underscores.
 	Name string `json:"name" validate:"required,regexp=^[a-zA-Z0-9\\-_]+$"`
 	// Email is the user's email address. It must be a valid email format.
@@ -23,6 +27,10 @@ type CreateUserAdminRequest struct {
 	Password string `json:"password" validate:"required,min=8,max=64,passwordComplexity"`
 	// Role defines the user's role in the system (e.g., "admin" or "user").
 	Role string `json:"role" validate:"required,oneof=user admin"`
+}
+
+type CreateUserResponse struct {
+	ID uuid.UUID `json:"id"`
 }
 
 // UpdateUserPasswordRequest represents the data required to update a user's password.
@@ -54,7 +62,7 @@ type ReadUsersResponse struct {
 // This DTO excludes sensitive information like passwords.
 type ReadUserResponse struct {
 	// ID is the unique identifier of the user.
-	ID string `json:"id"`
+	ID uuid.UUID `json:"id"`
 	// Name is the user's name.
 	Name string `json:"name"`
 	// Email is the user's email address.
