@@ -60,9 +60,9 @@ type UMS interface {
 	// It returns the unique ID of the created user or an error if the operation fails.
 	CreateUser(ctx context.Context, createUser dto.CreateUserRequest) (uuid.UUID, error)
 
-	// CreateUserAdmin creates a new user in the system, allowing the setting of the user's role.
+	// CreateUserWithRole creates a new user in the system, allowing the setting of the user's role.
 	// It returns the unique ID of the created user or an error if the operation fails.
-	CreateUserAdmin(ctx context.Context, createUser dto.CreateUserAdminRequest) (uuid.UUID, error)
+	CreateUserWithRole(ctx context.Context, createUser dto.CreateUserWithRoleRequest) (uuid.UUID, error)
 
 	// UpdateUserPassword updates a user's password in the system.
 	// It validates the new password and ensures the user exists before performing the update.
@@ -106,7 +106,7 @@ type UMS interface {
 // It ensures that the data provided in requests is properly formatted and valid.
 type Validator interface {
 	ValidateCreateUserReq(dto.CreateUserRequest) error
-	ValidateCreateUserAdminReq(dto.CreateUserAdminRequest) error
+	ValidateCreateUserWithRoleReq(dto.CreateUserWithRoleRequest) error
 	ValidateUID(string) error
 	ValidateUpdateUserPasswordReq(dto.UpdateUserPasswordRequest) error
 	ValidateUpdateUserNameReq(dto.UpdateUserNameRequest) error
@@ -173,29 +173,29 @@ func (h *Handler) CreateUser(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"id": uid.String()})
 }
 
-// CreateUserAdmin handles the HTTP POST request to create a new user with administrative privileges.
+// CreateUserWithRole handles the HTTP POST request to create a new user with administrative privileges.
 // Unlike CreateUser, it allows setting the Role of the user.
 // It expects a JSON payload in the request body containing user details.
 // If successful, it returns a 201 Created status with the ID of the newly created user.
 // Possible errors:
 //   - 400 Bad Request: Invalid JSON or validation failure.
 //   - 500 Internal Server Error: Failed to create the user in the service layer.
-func (h *Handler) CreateUserAdmin(c *gin.Context) {
+func (h *Handler) CreateUserWithRole(c *gin.Context) {
 	ctx := c.Request.Context()
-	createUser := dto.CreateUserAdminRequest{}
+	createUser := dto.CreateUserWithRoleRequest{}
 	err := c.ShouldBindJSON(&createUser)
 	if err != nil {
 		slog.Error("Cannot bind body request to dto", "err", err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"error": invalidJSON})
 		return
 	}
-	err = h.validator.ValidateCreateUserAdminReq(createUser)
+	err = h.validator.ValidateCreateUserWithRoleReq(createUser)
 	if err != nil {
 		slog.Error("Failed to validate request body", "err", err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	uid, err := h.service.CreateUserAdmin(ctx, createUser)
+	uid, err := h.service.CreateUserWithRole(ctx, createUser)
 	if err != nil {
 		slog.Error("Failed to create user", "err", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": createUserFailed})
