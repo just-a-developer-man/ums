@@ -10,14 +10,14 @@ import (
 type CreateUserRequest struct {
 	Name     string `json:"name" validate:"required,regexp=^[a-zA-Z0-9\\-_]+$"`
 	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=8,max=64,passwordComplexity"`
+	Password string `json:"password" validate:"required,min=6,max=64,passwordComplexity"`
 }
 
 // CreateUserWithRoleRequest represents the data required for an admin to create a new user.
 type CreateUserWithRoleRequest struct {
 	Name     string `json:"name" validate:"required,regexp=^[a-zA-Z0-9\\-_]+$"`
 	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=8,max=64,passwordComplexity"`
+	Password string `json:"password" validate:"required,min=6,max=64,passwordComplexity"`
 	Role     string `json:"role" validate:"required,oneof=user admin"`
 }
 
@@ -28,7 +28,7 @@ type CreateUserResponse struct {
 
 // UpdateUserPasswordRequest represents the data required to update a user's password.
 type UpdateUserPasswordRequest struct {
-	NewPassword string `json:"new_password" validate:"required,min=8,max=64,passwordComplexity"`
+	NewPassword string `json:"new_password" validate:"required,min=6,max=64,passwordComplexity"`
 }
 
 // UpdateUserNameRequest represents the data required to update a user's name.
