@@ -1,4 +1,4 @@
-package validator
+package validation
 
 import (
 	"encoding/json"
@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/go-playground/validator/v10"
+	govalidator "github.com/go-playground/validator/v10"
 )
 
 // ValidationError represents a custom error type for validation failures.
@@ -33,12 +33,12 @@ var (
 
 // Validator is a wrapper around go-playground/validator for validating project-related data.
 type Validator struct {
-	validate *validator.Validate
+	validate *govalidator.Validate
 }
 
 // NewValidator creates a new instance of Validator.
 func NewValidator() (*Validator, error) {
-	validate := validator.New(validator.WithRequiredStructEnabled())
+	validate := govalidator.New(govalidator.WithRequiredStructEnabled())
 	err := validate.RegisterValidation("password", validatePassword)
 	if err != nil {
 		return nil, fmt.Errorf("validate.RegisterValidation: %w", err)
@@ -48,9 +48,9 @@ func NewValidator() (*Validator, error) {
 	}, nil
 }
 
-// ValidateUID validates a user ID against the RFC4122 standard.
+// ValidateUID validates a user ID against the UUIDv5 standard.
 func (v *Validator) ValidateUID(uid string) error {
-	if err := v.validate.Var(uid, "required,uuid_rfc4122"); err != nil {
+	if err := v.validate.Var(uid, "required,uuid5"); err != nil {
 		return &ValidationError{Message: "invalid UID"}
 	}
 	return nil
@@ -68,8 +68,13 @@ func (v *Validator) ValidateStruct(data interface{}) error {
 }
 
 // validatePassword is a custom validator for password complexity.
-func validatePassword(fl validator.FieldLevel) bool {
+func validatePassword(fl govalidator.FieldLevel) bool {
 	password := fl.Field().String()
+
+	// Check for password length
+	if len(password) > 64 || len(password) < 6 {
+		return false
+	}
 
 	// Check for spaces in the password
 	if spaceRegexp.MatchString(password) {
@@ -102,7 +107,7 @@ func validatePassword(fl validator.FieldLevel) bool {
 
 // convertValidationErrors converts validation errors into a formatted JSON string.
 func convertValidationErrors(err error) error {
-	var vErrors validator.ValidationErrors
+	var vErrors govalidator.ValidationErrors
 	if errors.As(err, &vErrors) {
 		errMap := make(map[string]string)
 		for _, tagError := range vErrors {
