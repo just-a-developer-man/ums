@@ -7,6 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// handleError is the wrapper to handle an error occured during request processing
+// and to send appropriate response.
 func (h *Handler) handleError(
 	c *gin.Context,
 	logMessage string,
@@ -19,6 +21,7 @@ func (h *Handler) handleError(
 	}
 }
 
+// handleOK is the wrapper to response with no error status.
 func (h *Handler) handleOK(
 	c *gin.Context,
 	code int,
