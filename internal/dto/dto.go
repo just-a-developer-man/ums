@@ -8,14 +8,14 @@ import (
 
 // CreateUserRequest represents the data required to create a new user.
 type CreateUserRequest struct {
-	Name     string `json:"name" validate:"required,regexp=^[a-zA-Z0-9\\-_]+$"`
+	Name     string `json:"name" validate:"required,min=3,max=64,usernameFormat"`
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,min=6,max=64,passwordComplexity"`
 }
 
 // CreateUserWithRoleRequest represents the data required for an admin to create a new user.
 type CreateUserWithRoleRequest struct {
-	Name     string `json:"name" validate:"required,regexp=^[a-zA-Z0-9\\-_]+$"`
+	Name     string `json:"name" validate:"required,min=3,max=64,usernameFormat"`
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,min=6,max=64,passwordComplexity"`
 	Role     string `json:"role" validate:"required,oneof=user admin"`
@@ -33,7 +33,7 @@ type UpdateUserPasswordRequest struct {
 
 // UpdateUserNameRequest represents the data required to update a user's name.
 type UpdateUserNameRequest struct {
-	Name string `json:"name" validate:"required,regexp=^[a-zA-Z0-9\\-_]+$"`
+	Name string `json:"name" validate:"required,min=3,max=64,usernameFormat"`
 }
 
 // UpdateUserEmailRequest represents the data required to update a user's email.
@@ -58,9 +58,10 @@ type ReadUserResponse struct {
 
 // UpdateUserDataRequest represents the data required for an admin to update all user details.
 type UpdateUserDataRequest struct {
-	Name  string `json:"name" validate:"required,regexp=^[a-zA-Z0-9\\-_]+$"`
-	Email string `json:"email" validate:"required,email"`
-	Role  string `json:"role" validate:"required,oneof=user admin"`
+	Name     string `json:"name" validate:"required,usernameFormat"`
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"new_password" validate:"required,min=6,max=64,passwordComplexity"`
+	Role     string `json:"role" validate:"required,oneof=user admin"`
 }
 
 // UpdateUserRoleRequest represents the data required for an admin to update a user's role.
