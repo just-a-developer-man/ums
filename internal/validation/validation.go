@@ -1,7 +1,6 @@
 package validation
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -9,19 +8,7 @@ import (
 	govalidator "github.com/go-playground/validator/v10"
 )
 
-// ValidationError represents a custom error type for validation failures.
-type ValidationError struct {
-	Message string
-}
-
-func (e *ValidationError) Error() string {
-	return e.Message
-}
-
 var (
-	unknownValidationError = "failed to extract validation error details"
-	tagValueTemplate       = "%s=%v"
-
 	// Precompiled regular expressions for password validation.
 	spaceRegexp          = regexp.MustCompile(`\s`)
 	printableASCIIRegexp = regexp.MustCompile(`^[\x20-\x7E]+$`)
@@ -29,6 +16,7 @@ var (
 	uppercaseRegexp      = regexp.MustCompile(`[A-Z]`)
 	lowercaseRegexp      = regexp.MustCompile(`[a-z]`)
 	digitRegexp          = regexp.MustCompile(`[0-9]`)
+	usernameRegexp       = regexp.MustCompile(`^[a-zA-Z0-9\-_]+$`)
 )
 
 // Validator is a wrapper around go-playground/validator for validating project-related data.
@@ -39,9 +27,13 @@ type Validator struct {
 // NewValidator creates a new instance of Validator.
 func NewValidator() (*Validator, error) {
 	validate := govalidator.New(govalidator.WithRequiredStructEnabled())
-	err := validate.RegisterValidation("password", validatePassword)
+	err := validate.RegisterValidation("passwordComplexity", validatePassword)
 	if err != nil {
-		return nil, fmt.Errorf("validate.RegisterValidation: %w", err)
+		return nil, fmt.Errorf("password validate.RegisterValidation: %w", err)
+	}
+	err = validate.RegisterValidation("usernameFormat", validateUserName)
+	if err != nil {
+		return nil, fmt.Errorf("username validate.RegisterValidation: %w", err)
 	}
 	return &Validator{
 		validate: validate,
@@ -51,7 +43,7 @@ func NewValidator() (*Validator, error) {
 // ValidateUID validates a user ID against the UUIDv5 standard.
 func (v *Validator) ValidateUID(uid string) error {
 	if err := v.validate.Var(uid, "required,uuid5"); err != nil {
-		return &ValidationError{Message: "invalid UID"}
+		return &ValidateError{ctx: unwrapErrors(err), next: err}
 	}
 	return nil
 }
@@ -59,12 +51,24 @@ func (v *Validator) ValidateUID(uid string) error {
 // ValidateStruct is a method to validate structs and return JSON formatted error messages, wrapped into error.
 func (v *Validator) ValidateStruct(data interface{}) error {
 	if data == nil {
-		return &ValidationError{Message: "input data is nil"}
+		return &ValidateError{next: fmt.Errorf("provided data is nil")}
 	}
 	if err := v.validate.Struct(data); err != nil {
-		return convertValidationErrors(err)
+		return &ValidateError{ctx: unwrapErrors(err), next: err}
 	}
 	return nil
+}
+
+// validatePassword is a custom validator for username format.
+func validateUserName(fl govalidator.FieldLevel) bool {
+	username := fl.Field().String()
+
+	// Check for name length
+	if len(username) > 64 || len(username) < 3 {
+		return false
+	}
+
+	return usernameRegexp.MatchString(username)
 }
 
 // validatePassword is a custom validator for password complexity.
@@ -105,20 +109,25 @@ func validatePassword(fl govalidator.FieldLevel) bool {
 	return digitRegexp.MatchString(password)
 }
 
-// convertValidationErrors converts validation errors into a formatted JSON string.
-func convertValidationErrors(err error) error {
+// unwrapErrors extracts validation errors to the slice of ErrDesc structs.
+func unwrapErrors(err error) []ValidationErrCtx {
 	var vErrors govalidator.ValidationErrors
+	errDescs := make([]ValidationErrCtx, 0)
 	if errors.As(err, &vErrors) {
-		errMap := make(map[string]string)
 		for _, tagError := range vErrors {
-			tagString := fmt.Sprintf(tagValueTemplate, tagError.ActualTag(), tagError.Value())
-			errMap[tagString] = tagError.Error()
+			errDescs = append(errDescs, ValidationErrCtx{
+				Field: tagError.Field(),
+				Value: tagError.Value(),
+				Tag: func() string {
+					if tagError.Param() == "" {
+						return tagError.ActualTag()
+					}
+					return tagError.ActualTag() + "=" + tagError.Param()
+				}(),
+				Type: tagError.Type().String(),
+			})
 		}
-		outputJSON, err := json.Marshal(errMap)
-		if err != nil {
-			return &ValidationError{Message: unknownValidationError}
-		}
-		return &ValidationError{Message: string(outputJSON)}
+		return errDescs
 	}
-	return &ValidationError{Message: unknownValidationError}
+	return []ValidationErrCtx{}
 }
