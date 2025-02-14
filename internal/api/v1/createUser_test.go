@@ -1,0 +1,349 @@
+package v1
+
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"regexp"
+	"testing"
+	"ums/internal/api/v1/router"
+	"ums/internal/dto"
+	"ums/internal/logger"
+	"ums/internal/mocks/v1mocks"
+	"ums/internal/validation"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+)
+
+const (
+	createUserPath = "/api/v1/user"
+	anyString      = ".*"
+)
+
+func TestCreateUser(t *testing.T) {
+	// Initialize logger
+	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
+	wrappedHandler := logger.NewLogRequestHandler(handler)
+	slog.SetDefault(slog.New(wrappedHandler))
+
+	// Initialize validator
+	validator, err := validation.NewValidator()
+	if err != nil {
+		t.Fatalf("Failed to initialize validator: %s", err)
+	}
+
+	// Valid test data
+	validName := "user1"
+	validPassword := "Str0ngPassword!"
+	validEmail := "user1@mail.com"
+	validUID := uuid.NewSHA1(uuid.NameSpaceDNS, []byte(validName))
+
+	validRequest := dto.CreateUserRequest{
+		Name:     validName,
+		Email:    validEmail,
+		Password: validPassword,
+	}
+
+	// Invalid test data
+	badNameTooShort := dto.CreateUserRequest{
+		Name:     "u1",
+		Email:    validEmail,
+		Password: validPassword,
+	}
+
+	badNameTooLong := dto.CreateUserRequest{
+		Name:     "thisisaverylongusernameexceedingthelimitof64charactersaaaaaaaaaaa",
+		Email:    validEmail,
+		Password: validPassword,
+	}
+
+	badNameInvalidFormat := dto.CreateUserRequest{
+		Name:     "user@1",
+		Email:    validEmail,
+		Password: validPassword,
+	}
+
+	badPasswordTooShort := dto.CreateUserRequest{
+		Name:     validName,
+		Email:    validEmail,
+		Password: "short",
+	}
+
+	badPasswordNoComplexity := dto.CreateUserRequest{
+		Name:     validName,
+		Email:    validEmail,
+		Password: "passwordwithoutcomplexity",
+	}
+
+	badEmailInvalidFormat := dto.CreateUserRequest{
+		Name:     validName,
+		Email:    "usermail.com",
+		Password: validPassword,
+	}
+
+	missingName := dto.CreateUserRequest{
+		Name:     "",
+		Email:    validEmail,
+		Password: validPassword,
+	}
+
+	missingEmail := dto.CreateUserRequest{
+		Name:     validName,
+		Email:    "",
+		Password: validPassword,
+	}
+
+	missingPassword := dto.CreateUserRequest{
+		Name:     validName,
+		Email:    validEmail,
+		Password: "",
+	}
+
+	// Test case structure
+	type args struct {
+		router *gin.Engine
+		url    string
+		method string
+		input  any
+	}
+
+	type want struct {
+		code     int
+		response string
+	}
+
+	tests := []struct {
+		name string
+		args args
+		want want
+	}{
+		// Valid request
+		{
+			name: "Create user with valid request",
+			args: args{
+				router: setupRouter(t, validator, func(mockums *v1mocks.MockUMS) {
+					mockums.EXPECT().CreateUser(mock.Anything, validRequest).Return(validUID, nil)
+				}),
+				url:    createUserPath,
+				method: http.MethodPost,
+				input:  validRequest,
+			},
+			want: want{
+				code:     http.StatusCreated,
+				response: marshalResponse(t, dto.CreateUserResponse{ID: validUID}),
+			},
+		},
+		{
+			name: "Create user with role - internal error",
+			args: args{
+				router: setupRouter(t, validator, func(mockums *v1mocks.MockUMS) {
+					mockums.EXPECT().CreateUser(mock.Anything, validRequest).Return(uuid.Nil, errors.New("service error"))
+				}),
+				url:    createUserPath,
+				method: http.MethodPost,
+				input:  validRequest,
+			},
+			want: want{
+				code:     http.StatusInternalServerError,
+				response: anyString,
+			},
+		},
+
+		// Invalid name cases
+		{
+			name: "Create user with name too short",
+			args: args{
+				router: setupRouter(t, validator, func(mockums *v1mocks.MockUMS) {
+					mockums.AssertNotCalled(t, "CreateUser")
+				}),
+				url:    createUserPath,
+				method: http.MethodPost,
+				input:  badNameTooShort,
+			},
+			want: want{
+				code:     http.StatusBadRequest,
+				response: anyString,
+			},
+		},
+		{
+			name: "Create user with name too long",
+			args: args{
+				router: setupRouter(t, validator, func(mockums *v1mocks.MockUMS) {
+					mockums.AssertNotCalled(t, "CreateUser")
+				}),
+				url:    createUserPath,
+				method: http.MethodPost,
+				input:  badNameTooLong,
+			},
+			want: want{
+				code:     http.StatusBadRequest,
+				response: anyString,
+			},
+		},
+		{
+			name: "Create user with invalid name format",
+			args: args{
+				router: setupRouter(t, validator, func(mockums *v1mocks.MockUMS) {
+					mockums.AssertNotCalled(t, "CreateUser")
+				}),
+				url:    createUserPath,
+				method: http.MethodPost,
+				input:  badNameInvalidFormat,
+			},
+			want: want{
+				code:     http.StatusBadRequest,
+				response: anyString,
+			},
+		},
+		// Invalid password cases
+		{
+			name: "Create user with password too short",
+			args: args{
+				router: setupRouter(t, validator, func(mockums *v1mocks.MockUMS) {
+					mockums.AssertNotCalled(t, "CreateUser")
+				}),
+				url:    createUserPath,
+				method: http.MethodPost,
+				input:  badPasswordTooShort,
+			},
+			want: want{
+				code:     http.StatusBadRequest,
+				response: anyString,
+			},
+		},
+		{
+			name: "Create user with password lacking complexity",
+			args: args{
+				router: setupRouter(t, validator, func(mockums *v1mocks.MockUMS) {
+					mockums.AssertNotCalled(t, "CreateUser")
+				}),
+				url:    createUserPath,
+				method: http.MethodPost,
+				input:  badPasswordNoComplexity,
+			},
+			want: want{
+				code:     http.StatusBadRequest,
+				response: anyString,
+			},
+		},
+		// Invalid email cases
+		{
+			name: "Create user with invalid email format",
+			args: args{
+				router: setupRouter(t, validator, func(mockums *v1mocks.MockUMS) {
+					mockums.AssertNotCalled(t, "CreateUser")
+				}),
+				url:    createUserPath,
+				method: http.MethodPost,
+				input:  badEmailInvalidFormat,
+			},
+			want: want{
+				code:     http.StatusBadRequest,
+				response: anyString,
+			},
+		},
+		// Missing fields cases
+		{
+			name: "Create user with missing name",
+			args: args{
+				router: setupRouter(t, validator, func(mockums *v1mocks.MockUMS) {
+					mockums.AssertNotCalled(t, "CreateUser")
+				}),
+				url:    createUserPath,
+				method: http.MethodPost,
+				input:  missingName,
+			},
+			want: want{
+				code:     http.StatusBadRequest,
+				response: anyString,
+			},
+		},
+		{
+			name: "Create user with missing email",
+			args: args{
+				router: setupRouter(t, validator, func(mockums *v1mocks.MockUMS) {
+					mockums.AssertNotCalled(t, "CreateUser")
+				}),
+				url:    createUserPath,
+				method: http.MethodPost,
+				input:  missingEmail,
+			},
+			want: want{
+				code:     http.StatusBadRequest,
+				response: anyString,
+			},
+		},
+		{
+			name: "Create user with missing password",
+			args: args{
+				router: setupRouter(t, validator, func(mockums *v1mocks.MockUMS) {
+					mockums.AssertNotCalled(t, "CreateUser")
+				}),
+				url:    createUserPath,
+				method: http.MethodPost,
+				input:  missingPassword,
+			},
+			want: want{
+				code:     http.StatusBadRequest,
+				response: anyString,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			inputJSON := marshalInput(t, tt.args.input)
+			req, err := http.NewRequest(tt.args.method, tt.args.url, bytes.NewReader(inputJSON))
+			if err != nil {
+				t.Fatalf("Failed to create HTTP request: %s", err)
+			}
+
+			tt.args.router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.want.code, w.Code)
+			body := w.Body.String()
+
+			if tt.want.response == anyString {
+				assert.Regexp(t, regexp.MustCompile(".*"), body)
+			} else {
+				assert.Equal(t, tt.want.response, body)
+			}
+		})
+	}
+}
+
+func setupRouter(t *testing.T, validator *validation.Validator, mockSetup func(*v1mocks.MockUMS)) *gin.Engine {
+	mockums := v1mocks.NewMockUMS(t)
+	mockSetup(mockums)
+
+	h, err := New(mockums, validator)
+	if err != nil {
+		t.Fatalf("Failed to initialize handler: %s", err)
+	}
+
+	return router.SetupRouter(h, gin.TestMode)
+}
+
+func marshalInput(t *testing.T, input any) []byte {
+	inputJSON, err := json.Marshal(input)
+	if err != nil {
+		t.Fatalf("Failed to marshal input: %s", err)
+	}
+	return inputJSON
+}
+
+func marshalResponse(t *testing.T, response any) string {
+	jsonResponse, err := json.Marshal(response)
+	if err != nil {
+		t.Fatalf("Failed to marshal response: %s", err)
+	}
+	return string(jsonResponse)
+}
