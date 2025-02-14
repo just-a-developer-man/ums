@@ -1,0 +1,23 @@
+# .mockery.yaml
+with-expecter: true
+packages:
+  github.com/go-playground/validator/v10:
+    config:
+    interfaces:
+      FieldLevel:
+        config:
+          with-expecter: true
+          filename: "mock_{{.InterfaceName}}.go"
+          dir: "internal/mocks/{{.PackageName}}mocks"
+          mockname: "Mock{{.InterfaceName}}"
+          outpkg: "{{.PackageName}}mocks"
+  ums/internal/api/v1:
+    config:
+    interfaces:
+      UMS:
+        config:
+          with-expecter: true
+          filename: "mock_{{.InterfaceName}}.go"
+          dir: "internal/mocks/{{.PackageName}}mocks"
+          mockname: "Mock{{.InterfaceName}}"
+          outpkg: "{{.PackageName}}mocks"
