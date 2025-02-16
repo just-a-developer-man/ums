@@ -62,31 +62,31 @@ func (h *Handler) CreateUserWithRole(c *gin.Context) {
 
 // UpdateUserRole handles the HTTP PUT request to update user's password in the system.
 func (h *Handler) UpdateUserPassword(c *gin.Context) {
-	updatePassword := dto.UpdateUserPasswordRequest{}
+	updatePassword := &dto.UpdateUserPasswordRequest{}
 	h.updateUserData(c, updatePassword)
 }
 
 // UpdateUserRole handles the HTTP PUT request to update user's name in the system.
 func (h *Handler) UpdateUserName(c *gin.Context) {
-	updateUsername := dto.UpdateUserNameRequest{}
+	updateUsername := &dto.UpdateUserNameRequest{}
 	h.updateUserData(c, updateUsername)
 }
 
 // UpdateUserRole handles the HTTP PUT request to update user's email in the system.
 func (h *Handler) UpdateUserEmail(c *gin.Context) {
-	updateEmail := dto.UpdateUserEmailRequest{}
+	updateEmail := &dto.UpdateUserEmailRequest{}
 	h.updateUserData(c, updateEmail)
 }
 
 // UpdateUserRole handles the HTTP PUT request to update user's role in the system.
 func (h *Handler) UpdateUserRole(c *gin.Context) {
-	updateRole := dto.UpdateUserRoleRequest{}
+	updateRole := &dto.UpdateUserRoleRequest{}
 	h.updateUserData(c, updateRole)
 }
 
 // UpdateUserData handles the HTTP PUT request to update user's data in the system.
 func (h *Handler) UpdateUserData(c *gin.Context) {
-	updateData := dto.UpdateUserDataRequest{}
+	updateData := &dto.UpdateUserDataRequest{}
 	h.updateUserData(c, updateData)
 }
 
