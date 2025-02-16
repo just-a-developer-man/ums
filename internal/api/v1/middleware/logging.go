@@ -9,14 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func AdminAuth() gin.HandlerFunc {
-	slog.Debug("Registering admin authentication middleware")
-	return func(c *gin.Context) {
-		slog.DebugContext(c.Request.Context(), "Perfoming admin authentication")
-		c.Next()
-	}
-}
-
 func Logging() gin.HandlerFunc {
 	slog.Debug("Registering logging middleware")
 	return func(c *gin.Context) {

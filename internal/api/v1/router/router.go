@@ -57,7 +57,6 @@ func setupV1Subgroup(g *gin.RouterGroup, h Handler) {
 
 func setupAdminSubgroup(g *gin.RouterGroup, h Handler) {
 	admin := g.Group(adminGroup)
-	admin.Use(middleware.AdminAuth())
 	{
 		admin.GET(users, h.ReadUsers)
 		admin.POST(user, h.CreateUserWithRole)
