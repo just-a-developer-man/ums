@@ -24,7 +24,7 @@ const (
 	createUserWithRolePath = "/api/v1/admin/user"
 )
 
-func TestCreateUserWithRole(t *testing.T) {
+func TestHandler_CreateUserWithRole(t *testing.T) {
 	// Initialize logger
 	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
 	wrappedHandler := logger.NewLogRequestHandler(handler)

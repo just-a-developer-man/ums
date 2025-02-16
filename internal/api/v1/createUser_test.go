@@ -27,7 +27,7 @@ const (
 	anyString      = ".*"
 )
 
-func TestCreateUser(t *testing.T) {
+func TestHandler_CreateUser(t *testing.T) {
 	// Initialize logger
 	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
 	wrappedHandler := logger.NewLogRequestHandler(handler)
